@@ -16,7 +16,7 @@
           {
             "group": "Get Started",
             "pages": [
-              "guides/introduction",
+              "index",
               "guides/quickstart",
               "guides/authentication"
             ]
