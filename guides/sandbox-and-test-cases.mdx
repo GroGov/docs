@@ -1,0 +1,239 @@
+---
+title: "Sandbox & test cases"
+description: "Test credentials, magic tokens, and worked scenarios."
+---
+
+<Note>
+All values on this page are **non-production test fixtures** seeded into the staging environment (`https://apistagepc.grogov.us`), bound to test agencies. They are safe to use freely and are never used for real money.
+</Note>
+
+## Sandbox API keys
+
+| Key | Partner | Behavior |
+|---|---|---|
+| `pc_f300xkeypartnerxsecret0001` | Partner X | Active — use for most tests |
+| `pc_f300ykeypartnerysecret0002` | Partner Y | Active — authorized for the partner-only portal |
+| `pc_f300ikeyinactivesecret0003` | (inactive) | Returns `401` — for testing auth failures |
+
+## Sandbox portals
+
+| `portalId` | Type | Behavior |
+|---|---|---|
+| `f3000a11-4444-41a1-a444-444444444444` | Public, gateway configured | Use for successful charges |
+| `f3000b11-5555-41a1-a555-555555555555` | Public, **no gateway** | Returns `503 GATEWAY_NOT_CONFIGURED` |
+| `f3000c11-6666-41a1-a666-666666666666` | Partner-only | Only Partner Y may transact; others get `403 PORTAL_ACCESS_DENIED` |
+
+## Magic card tokens
+
+Pass these as `paymentMethod` in a create-payment request to trigger specific gateway behaviors deterministically.
+
+| `paymentMethod` value | Result |
+|---|---|
+| `{ "type": "card_token", "token": "tok_success" }` | Succeeds → `status: succeeded` |
+| `{ "type": "card_token", "token": "tok_decline_retry" }` | `402 PAYMENT_DECLINED` (soft decline) |
+| `{ "type": "card_token", "token": "tok_timeout" }` | `504 PAYMENT_TIMEOUT` (gateway hang) |
+| `{ "type": "card_token", "token": "tok_error_500" }` | `402 PAYMENT_DECLINED` (gateway 500 path) |
+| `{ "type": "card_token", "token": "tok_malformed" }` | `402 PAYMENT_DECLINED` (malformed gateway 2xx) |
+| `{ "type": "vault", "vaultId": "vault_success" }` | Succeeds (stored-card charge) |
+| `{ "type": "vault", "vaultId": "vault_decline" }` | `402 PAYMENT_DECLINED` |
+
+## Worked scenarios
+
+Each snippet uses `Authorization: ApiKey pc_…` directly so it is self-contained — no JWT exchange required. Replace `$(uuidgen)` with any unique string if your shell does not have `uuidgen`.
+
+### 1. Successful sale (F-301 TC-01)
+
+Charge `tok_success` against portal A. Returns `status: "succeeded"` immediately.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 2. Auth then capture (F-301 TC-02 + F-302 TC-01)
+
+**Step 1 — create with `capture: "auth"`:** returns `status: "authorized"` and an `expiresAt` timestamp.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "auth",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+**Step 2 — capture:** replace `$PAYMENT_ID` with the `transactionId` from step 1. Returns `status: "succeeded"`.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments/$PAYMENT_ID/capture \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### 3. Declined charge (F-301 TC-14)
+
+`tok_decline_retry` triggers a deterministic soft decline. Returns `402` with code `PAYMENT_DECLINED`.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_decline_retry" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 4. Timeout (F-301 TC-18)
+
+`tok_timeout` simulates a gateway hang. Returns `504` with code `PAYMENT_TIMEOUT`. When you receive this error the payment status is **unknown** — use `GET /api/partner/v1/payments/{id}` (the `transactionId` is included in the error response) to determine the final state before retrying. See [Errors](/guides/errors) for retry guidance.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_timeout" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 5. Portal without gateway (F-301 TC-10)
+
+Portal B has no payment gateway configured. Returns `503` with code `GATEWAY_NOT_CONFIGURED`.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000b11-5555-41a1-a555-555555555555",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 6. Unauthorized portal (F-301 TC-11)
+
+Portal C is restricted to Partner Y only. Sending Partner X's key returns `403` with code `PORTAL_ACCESS_DENIED`. Use Partner Y's key (`pc_f300ykeypartnerysecret0002`) to transact against this portal successfully.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000c11-6666-41a1-a666-666666666666",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 7. Idempotent replay (F-306 TC-01)
+
+Send the exact same request body and `Idempotency-Key` twice. The second response is identical to the first and carries the `Idempotent-Replayed: true` response header. Replace `my-idempotency-key-001` with any fixed string; the key must be the same in both calls.
+
+```bash cURL
+# First call — processes normally
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: my-idempotency-key-001" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+
+# Second call — same key and body, returns cached response with Idempotent-Replayed: true
+curl -si -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: my-idempotency-key-001" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 5000,
+    "currency": "USD",
+    "capture": "sale",
+    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+    "lineItems": [
+      { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
+    ]
+  }'
+```
+
+### 8. Line-item refund (F-303 TC-03)
+
+Refund a single line item by its ID. The line-item ID goes in the URL path — use the `id` field from `lineItems[].id` in a prior create or get-payment response (not the group `transactionId`). The response includes `target: "line_item"` with updated `lineItemRemainingRefundableAmount` and `groupRemainingRefundableAmount`. Replace `$LINE_ITEM_ID` with the line-item `id`.
+
+```bash cURL
+curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments/$LINE_ITEM_ID/refund \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{ "amount": 5000 }'
+```
+
+<Card title="API Reference" icon="code">
+  Switch to the **API Reference** tab above to browse every endpoint, inspect request and response schemas, and try requests directly in the interactive playground.
+</Card>

@@ -1,0 +1,67 @@
+---
+title: "Errors"
+description: "Error envelope and stable codes."
+---
+
+All error responses use a consistent envelope. Switch on `details.code` — it is the stable, machine-readable identifier that will not change between releases.
+
+## Error envelope
+
+```json
+{
+  "success": false,
+  "message": "Payment was declined.",
+  "details": {
+    "code": "PAYMENT_DECLINED",
+    "transactionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "gatewayMessage": "...",
+    "gatewayResponseCode": "..."
+  }
+}
+```
+
+`details.transactionId` is present when a transaction was created before the error occurred — for example on `PAYMENT_DECLINED` or `PAYMENT_TIMEOUT`. Use it to look up the payment state with `GET /payments/{id}`.
+
+## Error codes
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `PAYMENT_DECLINED` | 402 | Gateway declined the charge |
+| `PAYMENT_TIMEOUT` | 504 | Gateway did not respond in time |
+| `PAYMENT_GATEWAY_ERROR` | 502 | Unexpected gateway error |
+| `PAYMENT_NOT_FOUND` | 404 | Payment ID not found or out of scope |
+| `INVALID_STATE` | 422 | Payment is in the wrong state for this operation |
+| `REFUND_EXCEEDS_AMOUNT` | 422 | Refund amount exceeds remaining balance |
+| `CAPTURE_FAILED` | 422 | Gateway rejected the capture |
+| `VOID_FAILED` | 422 | Gateway rejected the void (use refund instead) |
+| `IDEMPOTENCY_MISMATCH` | 409 | Same Idempotency-Key with different body |
+| `GATEWAY_NOT_CONFIGURED` | 503 | Portal has no payment gateway set up |
+| `PORTAL_ACCESS_DENIED` | 403 | Partner is not authorised for this portal |
+
+## Handling patterns
+
+### `402 PAYMENT_DECLINED`
+
+Surface `details.gatewayMessage` to the cardholder so they understand why the charge failed. Do not retry the same card without cardholder action (new card number, different payment method, etc.).
+
+### `504 PAYMENT_TIMEOUT`
+
+<Warning>
+When a timeout occurs, the **payment status is unknown** — the charge may or may not have gone through. Do **not** blindly retry. Re-query the payment with `GET /payments/{id}` (or list by your `referenceId`) to check the actual status before attempting another charge. Use an `Idempotency-Key` on the retry so a duplicate charge cannot occur if the original did succeed.
+</Warning>
+
+### `422 INVALID_STATE` / `CAPTURE_FAILED` / `VOID_FAILED`
+
+The resource is not in a state that allows the requested operation. For `VOID_FAILED`, check `details.suggestedAction` — when the value is `"refund"`, the batch has already closed and a refund is the correct next step.
+
+### `409 IDEMPOTENCY_MISMATCH`
+
+You reused an `Idempotency-Key` with a different request body. Generate a fresh key for the new attempt. See [Idempotency](/guides/idempotency).
+
+### `503 GATEWAY_NOT_CONFIGURED`
+
+The portal referenced in your request has no payment gateway configured. Contact the agency or support to resolve the configuration before retrying.
+
+### `403 PORTAL_ACCESS_DENIED`
+
+Your API key is not authorised for the `portalId` in the request. This code is also returned for unknown portal IDs to avoid leaking portal existence. Verify the `portalId` and that your account has been granted access.

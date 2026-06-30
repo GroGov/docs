@@ -1,0 +1,143 @@
+---
+title: "Quickstart"
+description: "From zero to a successful sandbox payment in four steps."
+---
+
+<Note>
+The `paymentMethod.token` below is a one-time card token produced by your own client-side tokenization integration (NMI Collect.js). Generating it is out of scope for these docs — the sandbox tokens on the [Sandbox & test cases](/guides/sandbox-and-test-cases) page let you exercise the API without one.
+</Note>
+
+<Steps>
+  <Step title="Get your credentials">
+    API keys are issued manually as part of the GroGov partner onboarding process. Email `support@grogov.us` to start a partner agreement; GroGov provisions an API account and shares your **API key** (`pc_…`) and one or more **`portalId`** values out-of-band.
+
+    For sandbox testing you can use the published test key on the [Sandbox & test cases](/guides/sandbox-and-test-cases) page — no onboarding required.
+  </Step>
+
+  <Step title="Exchange your key for a JWT">
+    Send your API key in the `Authorization` header to get a short-lived JWT. The token is valid for approximately one hour (`expiresIn: 3600`).
+
+    <CodeGroup>
+    ```bash cURL
+    curl -X POST https://apistagepc.grogov.us/api/partner/v1/auth/token \
+      -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001"
+    ```
+
+    ```ts Node.js
+    const res = await fetch(
+      "https://apistagepc.grogov.us/api/partner/v1/auth/token",
+      { method: "POST", headers: { Authorization: "ApiKey pc_f300xkeypartnerxsecret0001" } },
+    );
+    const { data } = await res.json();
+    const jwt = data.accessToken; // valid ~1 hour
+    ```
+    </CodeGroup>
+
+    Response:
+
+    ```json
+    {
+      "success": true,
+      "data": {
+        "accessToken": "<jwt>",
+        "tokenType": "Bearer",
+        "expiresIn": 3600,
+        "issuedAt": "2026-06-29T12:00:00.000Z"
+      }
+    }
+    ```
+
+    You can also skip this step entirely and send `Authorization: ApiKey pc_…` directly on every API call — see [Authentication](/guides/authentication) for a comparison of the two approaches.
+  </Step>
+
+  <Step title="Create a payment">
+    Post a payment to sandbox portal A using the `tok_success` test token. The `amount` must equal the sum of all line-item amounts (here 7500 + 2500 = 10000 cents = $100.00). Include a unique `Idempotency-Key` on every mutating request.
+
+    <CodeGroup>
+    ```bash cURL
+    curl -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+      -H "Authorization: Bearer $JWT" \
+      -H "Content-Type: application/json" \
+      -H "Idempotency-Key: $(uuidgen)" \
+      -d '{
+        "portalId": "f3000a11-4444-41a1-a444-444444444444",
+        "amount": 10000,
+        "currency": "USD",
+        "capture": "sale",
+        "paymentMethod": { "type": "card_token", "token": "tok_success" },
+        "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
+        "lineItems": [
+          { "amount": 7500, "referenceId": "CASE-2024-001", "description": "Court filing fee" },
+          { "amount": 2500, "referenceId": "CASE-2024-002", "description": "Processing fee" }
+        ]
+      }'
+    ```
+
+    ```ts Node.js
+    const res = await fetch(
+      "https://apistagepc.grogov.us/api/partner/v1/payments",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          portalId: "f3000a11-4444-41a1-a444-444444444444",
+          amount: 10000, // $100.00
+          currency: "USD",
+          capture: "sale",
+          paymentMethod: { type: "card_token", token: "tok_success" },
+          payer: { firstName: "Jane", lastName: "Doe", email: "jane.doe@example.com" },
+          lineItems: [
+            { amount: 7500, referenceId: "CASE-2024-001", description: "Court filing fee" },
+            { amount: 2500, referenceId: "CASE-2024-002", description: "Processing fee" },
+          ],
+        }),
+      },
+    );
+    const { data } = await res.json();
+    ```
+    </CodeGroup>
+
+    A successful `sale` returns `status: "succeeded"` immediately. Key fields in the response:
+
+    | Field | Description |
+    |---|---|
+    | `data.status` | `"succeeded"` — payment was captured |
+    | `data.transactionId` | Unique payment ID — save this for get/refund/void calls |
+    | `data.serviceFee` | Fee added by GroGov (cents) |
+    | `data.totalCharged` | `amount + serviceFee` actually charged to the card (cents) |
+    | `data.confirmationNumber` | Human-readable confirmation number for the payer |
+
+    See the API Reference for the full response schema.
+  </Step>
+
+  <Step title="Read it back">
+    Retrieve the payment you just created using its `transactionId`.
+
+    <CodeGroup>
+    ```bash cURL
+    curl https://apistagepc.grogov.us/api/partner/v1/payments/$TRANSACTION_ID \
+      -H "Authorization: Bearer $JWT"
+    ```
+
+    ```ts Node.js
+    const res = await fetch(
+      `https://apistagepc.grogov.us/api/partner/v1/payments/${transactionId}`,
+      { headers: { Authorization: `Bearer ${jwt}` } },
+    );
+    const { data } = await res.json();
+    ```
+    </CodeGroup>
+
+    You can also pass a **line-item ID** in place of the transaction ID to retrieve a payment by one of its line items — see [Refunds & line items](/guides/refunds-and-line-items) for details.
+  </Step>
+</Steps>
+
+<Card title="Next steps" icon="arrow-right">
+  - [Payment lifecycle](/guides/payment-lifecycle) — understand `auth`, capture, and terminal states
+  - [Idempotency](/guides/idempotency) — how to safely retry failed requests
+  - [Errors](/guides/errors) — error codes, retry guidance, and the full error envelope
+</Card>

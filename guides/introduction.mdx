@@ -1,0 +1,63 @@
+---
+title: "Introduction"
+description: "Server-to-server payments API for vetted GroGov partners."
+---
+
+The Partner Payments API is a server-to-server REST API for vetted partners — government agency case management systems, SaaS billing platforms, and similar integrations — to run sale, auth/capture, refund, void, and query operations directly against GroGov's payment infrastructure **without a citizen-facing browser flow**. Your backend calls our backend; citizens never leave your application.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/guides/quickstart">
+    From zero to a successful sandbox payment in four steps.
+  </Card>
+  <Card title="Authentication" icon="lock" href="/guides/authentication">
+    API key vs. JWT exchange, and when to use each.
+  </Card>
+  <Card title="Payment lifecycle" icon="arrow-right" href="/guides/payment-lifecycle">
+    How a payment moves from `pending` to `succeeded` (or not).
+  </Card>
+  <Card title="Sandbox & test cases" icon="flask" href="/guides/sandbox-and-test-cases">
+    Magic tokens and portal IDs for exercising every scenario.
+  </Card>
+</CardGroup>
+
+## What you can do in v1
+
+- **Create payments** — submit a `sale` (immediate capture) or an `auth` (hold funds, capture later).
+- **Capture** — convert an authorized hold into a settled charge.
+- **Refund** — full refund, partial refund, or refund against a specific line item.
+- **Void** — cancel an authorized hold before capture.
+- **Get a payment** — retrieve a single payment by transaction ID or line-item ID.
+- **List payments** — filter by portal, status, date range, and more; results are cursor-paginated.
+
+<Note>
+**Out of scope in v1:** Webhooks are not available — poll the get/list endpoints to track status changes. ACH/e-check, Apple Pay, and Google Pay are not supported. Settlement, batch, and deposit endpoints are not exposed to partners; use the get/list endpoints to reconcile.
+</Note>
+
+## Base URLs
+
+| Environment | Base URL |
+|---|---|
+| Staging (test environment — use this) | `https://apistagepc.grogov.us` |
+| Production | Available once your partner agreement is live — contact support. |
+
+All examples in these docs target the staging environment. It uses test gateway
+credentials, so no real money moves — see [Sandbox & test cases](/guides/sandbox-and-test-cases)
+for ready-to-use test keys and card tokens.
+
+## Conventions
+
+**Response envelope.** Every response — success or failure — is wrapped in a consistent JSON envelope. A successful call returns:
+
+```json
+{ "success": true, "data": { ... } }
+```
+
+An error returns:
+
+```json
+{ "success": false, "message": "Human-readable description.", "details": { "code": "ERROR_CODE" } }
+```
+
+**Amounts are integer minor units (cents).** The `amount` field is always an integer representing cents: `100` = $1.00, `10000` = $100.00. There are no decimals anywhere in the API.
+
+**Currency.** `currency` is always `USD` in v1. Include it in every request body.

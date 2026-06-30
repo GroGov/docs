@@ -1,0 +1,85 @@
+---
+title: "Idempotency"
+description: "Safe retries with Idempotency-Key."
+---
+
+Network errors happen. Without idempotency, a client retry on a failed request can create a duplicate charge. The Partner Payments API supports idempotent requests on all mutating payment endpoints so you can retry safely.
+
+## Supported endpoints
+
+- `POST /payments` — create a payment
+- `POST /payments/{id}/refund` — refund a payment
+
+## Sending the header
+
+Pass a unique string (max 255 characters) in the `Idempotency-Key` header. A UUID is the recommended format — use `$(uuidgen)` in shell or `crypto.randomUUID()` in Node.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
+  -H "Authorization: ApiKey pc_<your-key>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "amount": 10000,
+    "currency": "USD",
+    "capture": "sale",
+    "lineItems": [{ "description": "Court fee", "amount": 10000 }]
+  }'
+```
+
+```js Node.js
+// Generate a stable key with crypto.randomUUID() before the first attempt,
+// then reuse the same key on every retry for this charge.
+const idempotencyKey = crypto.randomUUID();
+
+const res = await fetch(
+  "https://apistagepc.grogov.us/api/partner/v1/payments",
+  {
+    method: "POST",
+    headers: {
+      Authorization: "ApiKey pc_<your-key>",
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      portalId: "f3000a11-4444-41a1-a444-444444444444",
+      amount: 10000, // $100.00
+      currency: "USD",
+      capture: "sale",
+      lineItems: [{ description: "Court fee", amount: 10000 }],
+    }),
+  }
+);
+const data = await res.json();
+```
+
+</CodeGroup>
+
+## Replay behaviour
+
+If you send the **same key with the same request body**, the API returns the original cached response without creating a new charge or refund. The response includes the header:
+
+```
+Idempotent-Replayed: true
+```
+
+No money moves on a replayed response.
+
+## Key mismatch
+
+<Warning>
+Sending the **same key with a different request body** returns `409 IDEMPOTENCY_MISMATCH`. Generate a fresh key for each logically distinct charge or refund.
+</Warning>
+
+## Retrying without a key
+
+<Warning>
+If you do **not** include an `Idempotency-Key` and your network request times out or errors, retrying **may double-charge the cardholder**. Always send an `Idempotency-Key` on every production charge and refund.
+</Warning>
+
+## Key expiry
+
+Cached responses are stored for approximately 24 hours. Re-sending an expired key with the same body creates a fresh charge as if the key had never been used. Generate the key once before your first attempt, store it alongside the pending transaction, and reuse it on retries within the same session.

@@ -1,0 +1,102 @@
+---
+title: "Amounts, fees & pagination"
+description: "Cents, service fees, and listing payments."
+---
+
+## Amounts
+
+All monetary values are **integer cents** in `USD`. There is no decimal representation.
+
+| Value | Meaning |
+|---|---|
+| `100` | $1.00 |
+| `1050` | $10.50 |
+| `10000` | $100.00 |
+
+When creating a payment, `amount` **must equal the sum of all `lineItems[].amount`** values. A mismatch returns `400`. A payment may contain between 1 and 50 line items.
+
+## Service fees
+
+Service fees are computed **server-side** from the resolved portal's fee configuration. Partners cannot override or bypass an agency's fee schedule.
+
+The payment response surfaces:
+
+| Field | Meaning |
+|---|---|
+| `amount` | Base amount in cents (what you passed in) |
+| `serviceFee` | Fee added by the portal's fee config |
+| `totalCharged` | `amount + serviceFee` — what the cardholder pays |
+| `refundedAmount` | Total refunded so far |
+| `remainingRefundableAmount` | `totalCharged - refundedAmount` |
+
+On each line item, `serviceFee` is pro-rated proportionally to that item's share of the group total.
+
+## Listing payments
+
+`GET /payments` returns a cursor-paginated list of payments, newest first.
+
+### Query parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `limit` | integer | Page size (default 25, max 100) |
+| `cursor` | string | Pagination cursor from previous response |
+| `status` | string | Filter by payment status |
+| `portalId` | UUID | Filter by portal |
+| `referenceId` | string | Filter by your own reference ID |
+| `from` | ISO 8601 | Start of date range |
+| `to` | ISO 8601 | End of date range |
+
+<Note>
+If you omit `limit`, the API returns **25** results per page (maximum 100).
+</Note>
+
+### Pagination
+
+Each response includes a `pagination` object:
+
+```json
+{
+  "nextCursor": "<opaque string>",
+  "hasMore": true,
+  "limit": 25
+}
+```
+
+Pass `nextCursor` as the `cursor` parameter on the next request. Stop when `hasMore` is `false`.
+
+### Example — filtered list
+
+<CodeGroup>
+
+```bash cURL
+# First page
+curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444" \
+  -H "Authorization: ApiKey pc_<your-key>"
+
+# Next page — append the cursor from the previous response
+curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444&cursor=<nextCursor>" \
+  -H "Authorization: ApiKey pc_<your-key>"
+```
+
+```js Node.js
+const baseUrl =
+  "https://apistagepc.grogov.us/api/partner/v1/payments" +
+  "?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444";
+
+// First page
+const res = await fetch(baseUrl, {
+  headers: { Authorization: "ApiKey pc_<your-key>" },
+});
+const { data, pagination } = await res.json();
+
+// Next page
+if (pagination.hasMore) {
+  const next = await fetch(`${baseUrl}&cursor=${pagination.nextCursor}`, {
+    headers: { Authorization: "ApiKey pc_<your-key>" },
+  });
+  const nextPage = await next.json();
+}
+```
+
+</CodeGroup>
