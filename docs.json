@@ -1,54 +1,49 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "aspen",
-  "name": "Grogov",
+  "name": "GroGov Payments API",
   "colors": {
-    "primary": "#008AFC",
-    "light": "#008AFC",
-    "dark": "#008AFC"
+    "primary": "#1F6FEB",
+    "light": "#4D9BFF",
+    "dark": "#1F6FEB"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/assets/images/favicon.png",
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    },
-    "groups": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "guides/introduction",
+              "guides/quickstart",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "guides/payment-lifecycle",
+              "guides/refunds-and-line-items",
+              "guides/idempotency",
+              "guides/amounts-fees-pagination",
+              "guides/errors"
+            ]
+          },
+          {
+            "group": "Testing",
+            "pages": [
+              "guides/sandbox-and-test-cases"
+            ]
+          }
         ]
       },
       {
-        "group": "API",
-        "openapi": "api-1.yaml"
+        "tab": "API Reference",
+        "openapi": "openapi.json"
       }
     ]
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
   },
   "navbar": {
     "links": [
@@ -57,14 +52,14 @@
         "href": "mailto:support@grogov.us"
       },
       {
-        "href": "https://pc.grogov.us",
-        "label": "Dashboard"
+        "label": "Dashboard",
+        "href": "https://pc.grogov.us"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "website": "https://grogov.us"
     }
   },
   "contextual": {
@@ -77,25 +72,8 @@
       "mcp",
       "cursor",
       "vscode"
-    ]
-  },
-  "api": {
-    "openapi": "api-1.yaml",
-    "params": {
-      "expanded": "all"
-    },
-    "playground": {
-      "display": "interactive"
-    },
-    "examples": {
-      "defaults": "all",
-      "languages": [
-        "javascript",
-        "csharp"
-      ],
-      "prefill": true,
-      "autogenerate": true
-    }
+    ],
+    "display": "header"
   },
   "markdown": {
     "schema": true

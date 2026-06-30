@@ -1,0 +1,87 @@
+---
+title: "Authentication"
+description: "API key vs. JWT exchange, and when to use each."
+---
+
+Every request to the Partner Payments API must include an `Authorization` header. There are two ways to authenticate.
+
+## Option 1 — API key (stateless)
+
+Send your API key on every request:
+
+```
+Authorization: ApiKey pc_<your-key>
+```
+
+The bare form without the `ApiKey` prefix is also accepted:
+
+```
+Authorization: pc_<your-key>
+```
+
+This is the simplest approach. The API verifies the key on each request via a bcrypt compare, which adds a small amount of latency.
+
+## Option 2 — JWT (exchange once)
+
+Exchange your API key for a short-lived JWT by calling `POST /api/partner/v1/auth/token` with your API key header. The response contains a Bearer token that is valid for approximately one hour. Send it on subsequent calls:
+
+```
+Authorization: Bearer <jwt>
+```
+
+This avoids the per-request bcrypt cost. When the token expires, re-exchange your API key to get a new one.
+
+<Tip>
+For low request volumes, use the API key directly — it's simpler and there's nothing to manage. For sustained or high-volume traffic (roughly more than 100 requests per minute), exchange for a JWT and reuse it until it expires, then re-exchange.
+</Tip>
+
+<Warning>
+JWT tokens last approximately one hour (`expiresIn: 3600`). There is **no refresh token** — when a JWT expires you must re-exchange your API key to obtain a new one.
+</Warning>
+
+## 401 causes
+
+The following conditions all produce a `401 Unauthorized` response:
+
+| Cause | Result |
+|---|---|
+| Key missing the `pc_` prefix / malformed | `401` |
+| Unknown key prefix | `401` |
+| Inactive / revoked partner key | `401` |
+| Garbage or expired Bearer token | `401` |
+
+## Both styles in practice
+
+The following examples show the same `GET /api/partner/v1/payments` call using each authentication style:
+
+<CodeGroup>
+```bash cURL — API key
+curl "https://apistagepc.grogov.us/api/partner/v1/payments" \
+  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001"
+```
+
+```bash cURL — Bearer JWT
+curl "https://apistagepc.grogov.us/api/partner/v1/payments" \
+  -H "Authorization: Bearer $JWT"
+```
+</CodeGroup>
+
+<CodeGroup>
+```ts Node.js — API key
+const res = await fetch(
+  "https://apistagepc.grogov.us/api/partner/v1/payments",
+  { headers: { Authorization: "ApiKey pc_f300xkeypartnerxsecret0001" } },
+);
+const { data } = await res.json();
+```
+
+```ts Node.js — Bearer JWT
+const res = await fetch(
+  "https://apistagepc.grogov.us/api/partner/v1/payments",
+  { headers: { Authorization: `Bearer ${jwt}` } },
+);
+const { data } = await res.json();
+```
+</CodeGroup>
+
+See [Errors](/guides/errors) for the full error envelope returned on authentication failures and other error conditions.
