@@ -1,0 +1,106 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "aspen",
+  "name": "Grogov",
+  "colors": {
+    "primary": "#008AFC",
+    "light": "#008AFC",
+    "dark": "#008AFC"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "pages": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Documentation",
+          "href": "https://mintlify.com/docs",
+          "icon": "book-open-cover"
+        },
+        {
+          "anchor": "Blog",
+          "href": "https://mintlify.com/blog",
+          "icon": "newspaper"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "API",
+        "openapi": "api-1.yaml"
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@grogov.us"
+      },
+      {
+        "href": "https://pc.grogov.us",
+        "label": "Dashboard"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.mintlify.com"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "api": {
+    "openapi": "api-1.yaml",
+    "params": {
+      "expanded": "all"
+    },
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "defaults": "all",
+      "languages": [
+        "javascript",
+        "csharp"
+      ],
+      "prefill": true,
+      "autogenerate": true
+    }
+  },
+  "markdown": {
+    "schema": true
+  },
+  "appearance": {
+    "default": "light"
+  }
+}
