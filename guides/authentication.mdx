@@ -57,7 +57,7 @@ The following examples show the same `GET /api/partner/v1/payments` call using e
 <CodeGroup>
 ```bash cURL — API key
 curl "https://apistagepc.grogov.us/api/partner/v1/payments" \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001"
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a"
 ```
 
 ```bash cURL — Bearer JWT
@@ -70,7 +70,7 @@ curl "https://apistagepc.grogov.us/api/partner/v1/payments" \
 ```ts Node.js — API key
 const res = await fetch(
   "https://apistagepc.grogov.us/api/partner/v1/payments",
-  { headers: { Authorization: "ApiKey pc_f300xkeypartnerxsecret0001" } },
+  { headers: { Authorization: "ApiKey pc_test_alpha_key_9f2b7c1d4e8a" } },
 );
 const { data } = await res.json();
 ```

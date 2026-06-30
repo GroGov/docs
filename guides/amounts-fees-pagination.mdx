@@ -71,18 +71,18 @@ Pass `nextCursor` as the `cursor` parameter on the next request. Stop when `hasM
 
 ```bash cURL
 # First page
-curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444" \
+curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=5a9b0004-0000-4000-a000-000000000004" \
   -H "Authorization: ApiKey pc_<your-key>"
 
 # Next page — append the cursor from the previous response
-curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444&cursor=<nextCursor>" \
+curl "https://apistagepc.grogov.us/api/partner/v1/payments?status=succeeded&limit=25&portalId=5a9b0004-0000-4000-a000-000000000004&cursor=<nextCursor>" \
   -H "Authorization: ApiKey pc_<your-key>"
 ```
 
 ```js Node.js
 const baseUrl =
   "https://apistagepc.grogov.us/api/partner/v1/payments" +
-  "?status=succeeded&limit=25&portalId=f3000a11-4444-41a1-a444-444444444444";
+  "?status=succeeded&limit=25&portalId=5a9b0004-0000-4000-a000-000000000004";
 
 // First page
 const res = await fetch(baseUrl, {

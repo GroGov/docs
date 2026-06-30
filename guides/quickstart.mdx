@@ -20,13 +20,13 @@ The `paymentMethod.token` below is a one-time card token produced by your own cl
     <CodeGroup>
     ```bash cURL
     curl -X POST https://apistagepc.grogov.us/api/partner/v1/auth/token \
-      -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001"
+      -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a"
     ```
 
     ```ts Node.js
     const res = await fetch(
       "https://apistagepc.grogov.us/api/partner/v1/auth/token",
-      { method: "POST", headers: { Authorization: "ApiKey pc_f300xkeypartnerxsecret0001" } },
+      { method: "POST", headers: { Authorization: "ApiKey pc_test_alpha_key_9f2b7c1d4e8a" } },
     );
     const { data } = await res.json();
     const jwt = data.accessToken; // valid ~1 hour
@@ -51,7 +51,7 @@ The `paymentMethod.token` below is a one-time card token produced by your own cl
   </Step>
 
   <Step title="Create a payment">
-    Post a payment to sandbox portal A using the `tok_success` test token. The `amount` must equal the sum of all line-item amounts (here 7500 + 2500 = 10000 cents = $100.00). Include a unique `Idempotency-Key` on every mutating request.
+    Post a payment to sandbox portal A using the `pc_test_card_approved` test token. The `amount` must equal the sum of all line-item amounts (here 7500 + 2500 = 10000 cents = $100.00). Include a unique `Idempotency-Key` on every mutating request.
 
     <CodeGroup>
     ```bash cURL
@@ -60,11 +60,11 @@ The `paymentMethod.token` below is a one-time card token produced by your own cl
       -H "Content-Type: application/json" \
       -H "Idempotency-Key: $(uuidgen)" \
       -d '{
-        "portalId": "f3000a11-4444-41a1-a444-444444444444",
+        "portalId": "5a9b0004-0000-4000-a000-000000000004",
         "amount": 10000,
         "currency": "USD",
         "capture": "sale",
-        "paymentMethod": { "type": "card_token", "token": "tok_success" },
+        "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
         "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
         "lineItems": [
           { "amount": 7500, "referenceId": "CASE-2024-001", "description": "Court filing fee" },
@@ -84,11 +84,11 @@ The `paymentMethod.token` below is a one-time card token produced by your own cl
           "Idempotency-Key": crypto.randomUUID(),
         },
         body: JSON.stringify({
-          portalId: "f3000a11-4444-41a1-a444-444444444444",
+          portalId: "5a9b0004-0000-4000-a000-000000000004",
           amount: 10000, // $100.00
           currency: "USD",
           capture: "sale",
-          paymentMethod: { type: "card_token", token: "tok_success" },
+          paymentMethod: { type: "card_token", token: "pc_test_card_approved" },
           payer: { firstName: "Jane", lastName: "Doe", email: "jane.doe@example.com" },
           lineItems: [
             { amount: 7500, referenceId: "CASE-2024-001", description: "Court filing fee" },

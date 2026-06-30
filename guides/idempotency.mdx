@@ -22,7 +22,7 @@ curl -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 10000,
     "currency": "USD",
     "capture": "sale",
@@ -45,7 +45,7 @@ const res = await fetch(
       "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify({
-      portalId: "f3000a11-4444-41a1-a444-444444444444",
+      portalId: "5a9b0004-0000-4000-a000-000000000004",
       amount: 10000, // $100.00
       currency: "USD",
       capture: "sale",

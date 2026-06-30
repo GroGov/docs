@@ -11,17 +11,17 @@ All values on this page are **non-production test fixtures** seeded into the sta
 
 | Key | Partner | Behavior |
 |---|---|---|
-| `pc_f300xkeypartnerxsecret0001` | Partner X | Active — use for most tests |
-| `pc_f300ykeypartnerysecret0002` | Partner Y | Active — authorized for the partner-only portal |
-| `pc_f300ikeyinactivesecret0003` | (inactive) | Returns `401` — for testing auth failures |
+| `pc_test_alpha_key_9f2b7c1d4e8a` | Partner Alpha | Active — use for most tests |
+| `pc_test_bravo_key_3a6d8e2f1b9c` | Partner Bravo | Active — authorized for the partner-only portal |
+| `pc_test_charlie_key_5c1a9d3f7b2e` | (inactive) | Returns `401` — for testing auth failures |
 
 ## Sandbox portals
 
 | `portalId` | Type | Behavior |
 |---|---|---|
-| `f3000a11-4444-41a1-a444-444444444444` | Public, gateway configured | Use for successful charges |
-| `f3000b11-5555-41a1-a555-555555555555` | Public, **no gateway** | Returns `503 GATEWAY_NOT_CONFIGURED` |
-| `f3000c11-6666-41a1-a666-666666666666` | Partner-only | Only Partner Y may transact; others get `403 PORTAL_ACCESS_DENIED` |
+| `5a9b0004-0000-4000-a000-000000000004` | Public, gateway configured | Use for successful charges |
+| `5a9b0005-0000-4000-a000-000000000005` | Public, **no gateway** | Returns `503 GATEWAY_NOT_CONFIGURED` |
+| `5a9b0006-0000-4000-a000-000000000006` | Partner-only | Only Partner Bravo may transact; others get `403 PORTAL_ACCESS_DENIED` |
 
 ## Magic card tokens
 
@@ -29,13 +29,13 @@ Pass these as `paymentMethod` in a create-payment request to trigger specific ga
 
 | `paymentMethod` value | Result |
 |---|---|
-| `{ "type": "card_token", "token": "tok_success" }` | Succeeds → `status: succeeded` |
-| `{ "type": "card_token", "token": "tok_decline_retry" }` | `402 PAYMENT_DECLINED` (soft decline) |
-| `{ "type": "card_token", "token": "tok_timeout" }` | `504 PAYMENT_TIMEOUT` (gateway hang) |
-| `{ "type": "card_token", "token": "tok_error_500" }` | `402 PAYMENT_DECLINED` (gateway 500 path) |
-| `{ "type": "card_token", "token": "tok_malformed" }` | `402 PAYMENT_DECLINED` (malformed gateway 2xx) |
-| `{ "type": "vault", "vaultId": "vault_success" }` | Succeeds (stored-card charge) |
-| `{ "type": "vault", "vaultId": "vault_decline" }` | `402 PAYMENT_DECLINED` |
+| `{ "type": "card_token", "token": "pc_test_card_approved" }` | Succeeds → `status: succeeded` |
+| `{ "type": "card_token", "token": "pc_test_card_declined" }` | `402 PAYMENT_DECLINED` (soft decline) |
+| `{ "type": "card_token", "token": "pc_test_card_timeout" }` | `504 PAYMENT_TIMEOUT` (gateway hang) |
+| `{ "type": "card_token", "token": "pc_test_card_error" }` | `402 PAYMENT_DECLINED` (gateway 500 path) |
+| `{ "type": "card_token", "token": "pc_test_card_malformed" }` | `402 PAYMENT_DECLINED` (malformed gateway 2xx) |
+| `{ "type": "vault", "vaultId": "pc_test_vault_approved" }` | Succeeds (stored-card charge) |
+| `{ "type": "vault", "vaultId": "pc_test_vault_declined" }` | `402 PAYMENT_DECLINED` |
 
 ## Worked scenarios
 
@@ -43,19 +43,19 @@ Each snippet uses `Authorization: ApiKey pc_…` directly so it is self-containe
 
 ### 1. Successful sale (F-301 TC-01)
 
-Charge `tok_success` against portal A. Returns `status: "succeeded"` immediately.
+Charge `pc_test_card_approved` against portal A. Returns `status: "succeeded"` immediately.
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -69,15 +69,15 @@ curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "auth",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -89,26 +89,26 @@ curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments/$PAYMENT_ID/capture \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
 
 ### 3. Declined charge (F-301 TC-14)
 
-`tok_decline_retry` triggers a deterministic soft decline. Returns `402` with code `PAYMENT_DECLINED`.
+`pc_test_card_declined` triggers a deterministic soft decline. Returns `402` with code `PAYMENT_DECLINED`.
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_decline_retry" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_declined" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -118,19 +118,19 @@ curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
 
 ### 4. Timeout (F-301 TC-18)
 
-`tok_timeout` simulates a gateway hang. Returns `504` with code `PAYMENT_TIMEOUT`. When you receive this error the payment status is **unknown** — use `GET /api/partner/v1/payments/{id}` (the `transactionId` is included in the error response) to determine the final state before retrying. See [Errors](/guides/errors) for retry guidance.
+`pc_test_card_timeout` simulates a gateway hang. Returns `504` with code `PAYMENT_TIMEOUT`. When you receive this error the payment status is **unknown** — use `GET /api/partner/v1/payments/{id}` (the `transactionId` is included in the error response) to determine the final state before retrying. See [Errors](/guides/errors) for retry guidance.
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_timeout" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_timeout" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -144,15 +144,15 @@ Portal B has no payment gateway configured. Returns `503` with code `GATEWAY_NOT
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000b11-5555-41a1-a555-555555555555",
+    "portalId": "5a9b0005-0000-4000-a000-000000000005",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -162,19 +162,19 @@ curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
 
 ### 6. Unauthorized portal (F-301 TC-11)
 
-Portal C is restricted to Partner Y only. Sending Partner X's key returns `403` with code `PORTAL_ACCESS_DENIED`. Use Partner Y's key (`pc_f300ykeypartnerysecret0002`) to transact against this portal successfully.
+Portal C is restricted to Partner Bravo only. Sending Partner Alpha's key returns `403` with code `PORTAL_ACCESS_DENIED`. Use Partner Bravo's key (`pc_test_bravo_key_3a6d8e2f1b9c`) to transact against this portal successfully.
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "portalId": "f3000c11-6666-41a1-a666-666666666666",
+    "portalId": "5a9b0006-0000-4000-a000-000000000006",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -189,15 +189,15 @@ Send the exact same request body and `Idempotency-Key` twice. The second respons
 ```bash cURL
 # First call — processes normally
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: my-idempotency-key-001" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -206,15 +206,15 @@ curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
 
 # Second call — same key and body, returns cached response with Idempotent-Replayed: true
 curl -si -X POST https://apistagepc.grogov.us/api/partner/v1/payments \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: my-idempotency-key-001" \
   -d '{
-    "portalId": "f3000a11-4444-41a1-a444-444444444444",
+    "portalId": "5a9b0004-0000-4000-a000-000000000004",
     "amount": 5000,
     "currency": "USD",
     "capture": "sale",
-    "paymentMethod": { "type": "card_token", "token": "tok_success" },
+    "paymentMethod": { "type": "card_token", "token": "pc_test_card_approved" },
     "payer": { "firstName": "Jane", "lastName": "Doe", "email": "jane.doe@example.com" },
     "lineItems": [
       { "amount": 5000, "referenceId": "CASE-2024-001", "description": "Court filing fee" }
@@ -228,7 +228,7 @@ Refund a single line item by its ID. The line-item ID goes in the URL path — u
 
 ```bash cURL
 curl -s -X POST https://apistagepc.grogov.us/api/partner/v1/payments/$LINE_ITEM_ID/refund \
-  -H "Authorization: ApiKey pc_f300xkeypartnerxsecret0001" \
+  -H "Authorization: ApiKey pc_test_alpha_key_9f2b7c1d4e8a" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{ "amount": 5000 }'
