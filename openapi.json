@@ -100,7 +100,7 @@
           "token": {
             "type": "string",
             "description": "One-time tokenized card from NMI Collect.js.",
-            "example": "tok_abc123"
+            "example": "pc_test_card_approved"
           }
         }
       },
@@ -112,7 +112,7 @@
           "vaultId": {
             "type": "string",
             "description": "Stored card vault ID from a previous transaction.",
-            "example": "vault_xyz789"
+            "example": "pc_test_vault_approved"
           }
         }
       },
@@ -432,7 +432,7 @@
                     "capture": "sale",
                     "paymentMethod": {
                       "type": "card_token",
-                      "token": "tok_abc123"
+                      "token": "pc_test_card_approved"
                     },
                     "payer": {
                       "firstName": "Jane",
@@ -462,7 +462,7 @@
                     "capture": "auth",
                     "paymentMethod": {
                       "type": "vault",
-                      "vaultId": "vault_xyz789"
+                      "vaultId": "pc_test_vault_approved"
                     },
                     "lineItems": [
                       {
